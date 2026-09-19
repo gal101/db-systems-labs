@@ -23,8 +23,9 @@ Two consequences follow, and both are deliberate:
 
 - **None of these directories compile or run on their own.** The modules here implement
   traits, types and interfaces that are declared in the omitted files.
-- **There are no benchmark or test numbers committed here**, because the harness that
-  produces them is not mine to publish.
+- **No test or benchmark artifacts are committed**, because the harnesses that produce
+  them belong to the course. Where a directory README quotes a measurement, the method,
+  the machine and the compiler flags are stated alongside it.
 
 Each directory's README documents what the code does, how it is put together, the design
 decisions behind it, and an explicit note on which parts were provided versus written.

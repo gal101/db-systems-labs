@@ -5,6 +5,19 @@
 uint32_t Config::L3_CACHE_SIZE = 24 * 1024 * 1024;
 uint32_t Config::NUM_CORES = 8;
 
+// Hash a key into a bucket-local table of size h.
+//
+// The low B bits are constant inside a bucket -- that is how the partition was
+// chosen -- so the bucket-local index has to come from the higher bits. Masking
+// (key >> B) directly is unsafe when the keys come from a range of the same
+// order as the row count: key >> B can then only take about as many distinct
+// values as there are rows in the bucket, so the table is effectively full and
+// linear probing degenerates into a quadratic scan. Multiplying by a large odd
+// constant first spreads all 64 bits of the key across the whole table.
+static inline uint32_t bucket_hash(uint64_t key, uint64_t h) {
+    return (uint32_t)(((key * 0x9E3779B97F4A7C15ull) >> 32) & (h - 1));
+}
+
 RadixJoin::RadixJoin(relation_t &R, relation_t &S) : R_(R), S_(S){
 }
 
@@ -160,7 +173,7 @@ void join_buckets(const PartitionedRelation &R_part,
                     uint64_t key = R_part.data[i].key;
                     uint64_t rid = R_part.data[i].rid;
 
-                    uint32_t hash = (key >> B) & (h - 1);
+                    uint32_t hash = bucket_hash(key, h);
                     while(hash_table[hash].first != UINT64_MAX) {
                         hash = (hash + 1) & (h - 1);
                     }
@@ -172,7 +185,7 @@ void join_buckets(const PartitionedRelation &R_part,
                     uint64_t key = S_part.data[i].key;
                     uint64_t rid = S_part.data[i].rid;
 
-                    uint32_t hash = (key >> B) & (h - 1);
+                    uint32_t hash = bucket_hash(key, h);
                     while(hash_table[hash].first != UINT64_MAX) {
                         if(hash_table[hash].first == key) {
                             thread_results[t].emplace_back(hash_table[hash].second, rid);
